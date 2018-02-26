@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        #page, header, article {
+            width: 700px;
+            margin: 0 auto;
+        }
+
+        header, article {
+            text-align: center;
+        }
+
+        table {
+            border-collapse: collapse;
+            border: 1px solid black;
+            width: 700px;
+            margin: 0 auto;
+        }
+        tr {
+            border-bottom: 1px solid black;
+            border-right: 1px solid black;
+        }
+
+        #title {
+            text-align: left;
+            width: 550px;
+        }
+    </style>
+    <script>
+        $(document).ready(function() {
+
+            //target의 class 중 from을 지우고 to를 생성한다.
+            function changeIcon(target, from, to) {
+                $(target).removeClass(from).addClass(to);
+            }
+
+            //index의 count 값을 변경한다.
+            function changeCount(index, count) {
+                var target = "td[data-index=" + index + "]";
+                $(target).html(count);
+            }
+
+            //소켓 생성
+            var socket = io.connect();
+            
+            socket.on('count', function(data) {
+                changeCount(data.index, data.count);
+            });
+
+            $('.products a#icon').click(function() {
+                if($(this).attr('toggle') != 'off') {
+                    var index = $(this).attr('data-index');
+                    socket.emit('cart', Number(index));         //카트에 넣는다.
+                    $(this).attr('toggle', 'off');
+                }else {
+                    var index = $(this).attr('data-index');
+
+                    if(confirm('물건을 구매하시겠습니까?')) {
+
+                    }else {
+                        socket.emit('return', Number(index));
+                    }
+                    $(this).attr('toggle', 'on');
+                }
+            });
+
+        });
+    </script>
+    <title>Store</title>
+</head>
+
+<body>
+    <div id='page'>
+        <header>
+            <h1>Store</h1>
+        </header>
+        <article>
+            <div id='search'><input type="text" placeholder="Filter items..." style="width: 700px"></div>
+            <div id='listitems'>
+                <table class="products">
+                    <caption style="text-align: left">products</caption>
+                    <% products.forEach(function (item, index) { %>
+                        <tr>
+                            <td style="padding: 0px; margin:0px"><img src="firefox.png" alt="image" width="30px" style="display: block; width: 50px; height: 50px"></td>
+                            <td id="title"><h3><%= item.name %></h3><p><%= item.price %>원</p></td>
+                            <td data-index="<%= index %>"><span><%= item.count %></span></td>
+                            <td><a href="#" id='icon' data-index="<%= index %>">icon</a></td>
+                        </tr>
+                    <% }); %>
+                </table>
+            </div>
+        </article>
+    </div>
+</body>
+
+</html>
