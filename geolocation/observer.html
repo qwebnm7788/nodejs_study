@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+        html, body, #map {
+            height: 100%;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCe2pMcPTOV-OuchYo4ODFyR8yvTqRhqfc">
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        $(document).ready(function() {
+            function setMarker(latitude, longitude) {
+                console.log(latitude + ", " + longitude);
+                var marker = new google.maps.Marker({
+                    position: {'lat': latitude, 'lng': longitude},
+                    map: map
+                });
+            }
+
+            var name = prompt('이름을 입력하세요', '이름');
+            var socket = io.connect();
+            socket.emit('join', name);
+
+            var temp = document.getElementById('map');
+            var map = new google.maps.Map(temp, {
+                zoom: 6,
+                center: {'lat': 37, 'lng': 126},
+                mapTypeId: 'roadmap'
+            });
+
+            //초기 위치 설정
+            $.getJSON('/showdata', {name: name}, function(data) {
+                $.each(data, function(index, item) {
+                    setMarker(item.latitude, item.longitude);
+                });
+            });
+
+            socket.on('receive', function(data) {
+                setMarker(data.latitude, data.longitude);
+            })
+        });
+    </script>
+    <title>Document</title>
+</head>
+
+<body>
+    <div id='map'>
+
+    </div>
+</body>
+
+</html>

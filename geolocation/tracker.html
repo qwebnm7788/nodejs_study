@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        $(document).ready(function() {
+            //a 태그 클릭시 위치 추적
+            $('a').click(function() {
+                var socket = io.connect();
+                var name = $('#textinput').val();
+                socket.emit('join', $('#textinput').val());         //지정된 이름으로 접속
+
+                socket.on('receive', function(data) {
+                    var latitude = data.latitude;
+                    var longitude = data.longitude;
+                    
+                    var output = '';
+                    output += '<h3>latitude: ' + latitude + '</h3>';
+                    output += '<h3>longitude: ' + longitude + '</h3>';
+                    output += '<p>' + data.date + '</p>';
+                    $('<li></li>').append(output).prependTo('#listview');           //li태그에 output을 넣고 listview에 추가한다.
+
+                    //개수가 무한히 늘어나는 것을 방지
+                    var content = $('#content');
+                    if(content.children().length > 7) {
+                        content.children().last().remove();
+                    }
+
+                    $('#listview').listview('refresh');
+                });
+
+                //위치 추적
+                navigator.geolocation.watchPosition(function(position) {
+                    //위치 정보 전송
+                    socket.emit('location', {
+                        name: name,
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                }, function(error) {
+                    //위치 정보를 가져오지 못하는 경우
+                    alert(error.message);
+                })
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <!-- 아이디 등록 -->
+    <div data-role="page" data-theme="b">
+        <div data-role="header">
+            <h1>Location Tracker</h1>
+        </div>
+        <div data-role="content">
+           <div data-role="fieldcontain">
+               <label for="textinput">Name</label>
+               <input type="text" id="textinput">
+           </div> 
+           <a href="#tracker" class="ui-btn ui-btn-b">Start Track</a>
+        </div>
+    </div>
+    <!-- 위치 추적 -->
+    <div data-role="page" id="tracker">
+        <div data-role="header" data-theme="b">
+            <h1>Location Tracker</h1>
+        </div>
+        <div data-role="content">
+            <ul id="listview" data-role="listview" data-inset="true"></ul>
+        </div>
+    </div>
+</body>
+
+</html>
