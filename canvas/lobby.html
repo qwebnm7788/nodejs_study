@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        $(document).ready(function() {
+            //ajax 이용 방 정보(JSON) 수집
+            $.getJSON('/room', function(data) {
+                //모든 방 정보를 container에 버튼 형태로 넣는다.
+                $.each(data, function(index, item){
+                    $('<button></button>').attr({
+                        'data-room': item
+                    }).text('Room name: ' + item).appendTo('#container');
+                })
+            });
+            
+            var socket = io.connect();
+
+            //사용자가 방을 추가하는 경우
+            socket.on('create_room', function(data) {
+                $('<button></button>').attr({
+                    'data-room': data
+                }).text('Room Number: ' + data).appendTo("#container");
+            });
+
+            //container의 버튼 클릭시 해당 방으로 이동
+            $('#container').on('click', 'button', function(data) {
+                var room = $(this).attr('data-room');
+                location = '/canvas/' + room;
+            });
+
+            //방 생성 버튼을 누르는 경우
+            $('body > button').click(function() {
+                var room = $('#room').val();
+                socket.emit('create_room', room);
+                location = '/canvas/' + room;        //이동까지
+            });
+
+        });
+    </script>
+    <title>Lobby</title>
+</head>
+
+<body>
+    <h1>Real Time Canvas</h1>
+    <p>Connected Web Server with socket.io</p>
+    <span>ROOM: </span>
+    <input id="room" type="text">
+    <button>CREATE ROOM</button>
+    <hr>
+    <div id="container">
+
+    </div>
+</body>
+
+</html>

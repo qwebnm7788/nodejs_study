@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/farbtastic.css" type='text/css'>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
+        crossorigin="anonymous"></script>
+    <script src="/farbtastic.js" type='text/javascript'></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        //point 생성자 (부모 개체 기준 x,y 좌표)
+        function Point(event, target) {
+            this.x = event.pageX - $(target).position().left;
+            this.y = event.pageY - $(target).position().top;
+        }
+    </script>
+    <script>
+        $(document).ready(function() {
+            var canvas = document.getElementById('canvas');
+            var context = canvas.getContext('2d');
+
+            var width = 5;
+            var opacity = 1.0;
+            var pressure = 1.0;
+            var color = '#000000';
+            var isDown = false;
+            var newPoint, oldPoint;
+
+            //색상 선택시 color 변수에 그 값이 들어간다.
+            $('#colorpicker').farbtastic(function(data) {
+                color = data;
+            });
+
+            canvas.addEventListener('mousedown', function(event) {
+                isDown = true;
+                oldPoint = new Point(event, this);      //시작점 저장
+            });
+
+            canvas.addEventListener('mouseup', function() {
+                isDown = false;
+            });
+
+            canvas.addEventListener('mousemove', function(event) {
+                if(isDown) {
+                    //드래그 중일때
+                    newPoint = new Point(event, this);
+                    socket.emit('draw', {
+                        width: width,
+                        color: color,
+                        x1: oldPoint.x,
+                        y1: oldPoint.y,
+                        x2: newPoint.x,
+                        y2: newPoint.y
+                    });
+
+                    oldPoint = newPoint;
+                }
+            });
+
+            $('#sliderA').change(function() {
+                width = $(this).val();
+            });
+
+            $('#sliderB').change(function() {
+                opacity = $(this).val();
+            });
+
+            var socket = io.connect();
+            socket.emit('join', '<%= room %>');
+            socket.on('line', function(data) {
+                context.lineWidth = data.width;
+                context.strokeSTyle = data.color;
+                context.globalAlpha = opacity * pressure;
+                context.beginPath();
+                context.moveTo(data.x1, data.y1);
+                context.lineTo(data.x2, data.y2);
+                context.stroke();
+            });
+        });
+    </script>
+    <title>Canvas</title>
+</head>
+<body>
+    <table border="10">
+        <tr>
+            <td rowspan="3">
+                <canvas id="canvas" width="1200" height="600"></canvas>
+            </td>
+            <td height="200">
+                <div id="colorpicker"></div>
+            </td>
+        </tr>
+        <tr>
+            <td height="25">
+                <input id="sliderA" type="range" min="0" max="20" value="5"><br>
+                <input id="sliderB" type="range" min="0" max="100">
+            </td>
+        </tr>
+        <tr>
+            <td style="background: orange;"></td>
+        </tr>
+    </table>
+</body>
+</html>
