@@ -7,7 +7,7 @@ const port = 3000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
-app.use('/users', require('./api/users'));
+app.use('/users', require('./api/user'));
 
 app.get('/', (req, res) => {
     res.send('Hello World\n');
@@ -16,3 +16,5 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 })
+
+module.exports = app;
