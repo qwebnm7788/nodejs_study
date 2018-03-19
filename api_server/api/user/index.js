@@ -10,4 +10,6 @@ router.delete('/:id', controller.destroy);
 
 router.post('/', controller.create);
 
+router.put('/:id', controller.update);
+
 module.exports = router;
