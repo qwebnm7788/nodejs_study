@@ -1,5 +1,7 @@
 var socket = io.connect('http://localhost:3000');
 
+socket.emit('joinroom', {room: 1});
+
 $("#changename").click(() => {
     socket.emit('changename', {nickname: $("#nickname").val()});                //이름이 변경된 경우 changename 이벤트 발생 (변경된 이름을 함께 전송)
 });
