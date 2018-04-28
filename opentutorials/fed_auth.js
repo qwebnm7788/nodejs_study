@@ -1,18 +1,22 @@
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
-//const sha256 = require('sha256');
-//const MySQLStore = require('express-mysql-session')(session);
 const bkfd2Password = require("pbkdf2-password");
 const hasher = bkfd2Password();
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
 const app = express();
 
 app.use(bodyParser.urlencoded({extended: false}));
+
 app.use(session({
     secret: 'asidn1-2d#*@',
     resave: false,
     saveUninitialized: true
 }));
+
+app.use(passport.initialize());
+app.use(passport.session());            //session 설정부분(12~16번줄) 이후에 나와야 한다.
 
 app.get('/count', (req, res) => {
     if(req.session.count) {
@@ -25,9 +29,9 @@ app.get('/count', (req, res) => {
 });
 
 app.get('/welcome', (req, res) => {
-    if(req.session.displayName) {
+    if(req.user && req.user.displayName) {
         res.send(`
-        <h1>Hello, ${req.session.displayName}</h1> 
+        <h1>Hello, ${req.user.displayName}</h1> 
         <a href="/auth/logout">Logout</a>
         `);
     } else {
@@ -68,39 +72,58 @@ var users = [
     }
 ];
 
-app.post('/auth/login', (req, res) => {
-    var username = req.body.username;
-    var password = req.body.password;
+passport.serializeUser((user, done) => {
+    console.log("serializeUser", user);
+    done(null, user.username);                  //user의 username을 session에 저장
+})
 
+passport.deserializeUser((id, done) => {
+    console.log("deserializeUser", id);
     for(var i = 0; i < users.length; i++) {
         var user = users[i];
-        if(username === user.username) {
-            return hasher({password: password, salt: user.salt}, (err, pass, salt, hash) => {
-                if(hash === user.password) {                //password + salt의 해시값이 생성된 값과 동일하다면
-                    req.session.displayName = user.displayName;
-                    req.session.save(() => {                //세션에 저장될때 콜백
-                        res.redirect('/welcome');
-                    })
-                } else {
-                    res.send('Who are you? <a href="/auth/login">login</a>');
-                }
-            })
+        if(user.username === id) {
+            return done(null, user);            //세션에 id와 같은 값이 저장되어 있다면!
         }
-        // if(username === user.username && sha256(password + user.salt) === user.password) {
-        //     req.session.displayName = user.displayName;
-        //     return req.session.save(() => {
-        //         res.redirect('/welcome');
-        //     });
-        // }
     }
+    return done(null, false);
 });
 
+passport.use(new LocalStrategy(
+    (username, password, done) => {
+        var uname = username;
+        var pwd = password;
+
+        for(var i = 0; i < users.length; i++) {
+            var user = users[i];
+            if(uname === user.username) {
+                return hasher({password: pwd, salt: user.salt}, (err, pass, salt, hash) => {
+                    if(hash === user.password) {                //password + salt의 해시값이 생성된 값과 동일하다면
+                        console.log('LocalStrategy', user);
+                        done(null, user);           //false가 아니면 인증에 성공
+                    } else {
+                        done(null, false);
+                    }
+                })
+            }
+        }     
+        done(null, false);   
+    }
+));
+
+app.post('/auth/login', 
+passport.authenticate(
+        'local',            //위에 정의한 LocalStrategy를 이용하여 인증을 진행
+        {
+            successRedirect: '/welcome',
+            failureRedirect: '/auth/login',
+            failureFlash: false
+        }
+    )
+)
 
 app.get('/auth/logout', (req, res) => {
-    delete req.session.displayName;             
+    req.logout();
     req.session.save(() => {
-        //delete를 통해 지워지는 작업이 mysql에서 진행이 완료된 후에 콜백함수를 통해
-        //반환해주어야 모든 작업이 완료된 후에 리다이렉트 할 수 있게 된다.
         res.redirect('/welcome');
     });
 });
@@ -137,10 +160,10 @@ app.post('/auth/register', (req, res) => {
             displayName: req.body.displayName
         };
         users.push(user);
-        req.session.displayName = req.body.displayName;         //등록 직후엔 곧바로 로그인 된 상태로 반환해준다.
-        console.log(users);
-        req.session.save(() => {
-            res.redirect('/welcome');
+        req.login(user, (err) => {
+            req.session.save(() => {
+                res.redirect('/welcome');
+            })
         });
     })
 });
